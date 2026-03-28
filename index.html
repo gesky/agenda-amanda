@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Agenda Amanda</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue: #1a73e8;
+    --blue-dark: #1557b0;
+    --surface: #fff;
+    --bg: #f6f8fc;
+    --text: #202124;
+    --text2: #5f6368;
+    --text3: #80868b;
+    --border: #dadce0;
+    --radius: 12px;
+    --header-h: 56px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'Roboto', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+  /* HEADER */
+  .top-bar {
+    position: sticky; top: 0; z-index: 50;
+    background: var(--blue);
+    height: var(--header-h);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  }
+  .top-bar-left { display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; font-family: 'Google Sans', sans-serif; font-weight: 700; font-size: 15px; color: white; }
+  .top-title { font-family: 'Google Sans', sans-serif; font-size: 18px; font-weight: 500; color: white; }
+  .top-week { font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 1px; }
+  .top-bar-right { display: flex; gap: 4px; }
+  .nav-btn {
+    width: 36px; height: 36px; border-radius: 50%; border: none;
+    background: rgba(255,255,255,0.15); color: white;
+    font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .nav-btn:hover { background: rgba(255,255,255,0.28); }
+  .today-btn {
+    padding: 0 14px; height: 36px; border-radius: 18px; border: 1.5px solid rgba(255,255,255,0.5);
+    background: transparent; color: white; font-size: 13px; font-weight: 500;
+    cursor: pointer; margin-right: 4px; transition: background 0.15s;
+  }
+  .today-btn:hover { background: rgba(255,255,255,0.15); }
+
+  /* DAY HEADERS */
+  .day-strip {
+    display: grid;
+    grid-template-columns: 48px repeat(6, 1fr);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: var(--header-h); z-index: 40;
+  }
+  .day-strip-spacer { border-right: 1px solid var(--border); }
+  .day-col-header {
+    text-align: center;
+    padding: 8px 2px 6px;
+    border-right: 1px solid var(--border);
+  }
+  .day-col-header:last-child { border-right: none; }
+  .day-name { font-size: 10px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+  .day-num-wrap { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 4px auto 0; }
+  .day-num-wrap.today { background: var(--blue); }
+  .day-num { font-family: 'Google Sans', sans-serif; font-size: 18px; font-weight: 400; color: var(--text2); }
+  .day-num-wrap.today .day-num { color: white; font-weight: 700; }
+
+  /* GRID */
+  .calendar-scroll { overflow-y: auto; }
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: 48px repeat(6, 1fr);
+    background: var(--surface);
+    min-height: calc(100vh - var(--header-h) - 60px);
+  }
+  .time-gutter { background: var(--surface); border-right: 1px solid var(--border); }
+  .time-cell {
+    height: 48px;
+    display: flex; align-items: flex-start; justify-content: flex-end;
+    padding: 0 6px 0 0;
+    padding-top: 2px;
+    font-size: 10px; color: var(--text3);
+    border-top: 1px solid var(--border);
+  }
+  .time-cell:first-child { border-top: none; }
+  .time-cell.half { font-size: 0; border-top-color: #efefef; }
+
+  .day-column {
+    border-right: 1px solid var(--border);
+    position: relative;
+  }
+  .day-column:last-child { border-right: none; }
+  .grid-cell {
+    height: 48px;
+    border-top: 1px solid var(--border);
+    position: relative;
+  }
+  .grid-cell.half-hour { border-top-color: #efefef; }
+
+  /* EVENTS */
+  .event-block {
+    position: absolute;
+    left: 2px; right: 2px;
+    border-radius: 6px;
+    padding: 3px 6px;
+    cursor: pointer;
+    overflow: hidden;
+    z-index: 5;
+    display: flex; flex-direction: column; justify-content: space-between;
+    transition: filter 0.15s, transform 0.1s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  }
+  .event-block:hover { filter: brightness(0.93); transform: scale(1.01); }
+  .event-block:active { transform: scale(0.98); }
+  .event-top { display: flex; align-items: flex-start; justify-content: space-between; }
+  .event-name { font-size: 11px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; line-height: 1.3; }
+  .event-badge {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: rgba(255,255,255,0.9);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 700; flex-shrink: 0; margin-left: 2px;
+  }
+  .badge-ok { color: #1e7e34; }
+  .badge-no { color: #c0392b; }
+  .event-time { font-size: 9px; opacity: 0.8; margin-top: 1px; }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4); z-index: 200;
+    align-items: flex-end; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-sheet {
+    background: var(--surface); border-radius: 20px 20px 0 0;
+    width: 100%; max-width: 540px; max-height: 88vh;
+    overflow-y: auto; padding-bottom: env(safe-area-inset-bottom, 16px);
+    animation: slideUp 0.22s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-drag { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 0; }
+  .modal-color-strip { height: 5px; margin: 14px 20px 0; border-radius: 3px; }
+  .modal-header { padding: 14px 20px 0; display: flex; justify-content: space-between; align-items: flex-start; }
+  .modal-title { font-family: 'Google Sans', sans-serif; font-size: 20px; font-weight: 500; color: var(--text); flex: 1; }
+  .modal-close-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--bg); cursor: pointer; font-size: 18px; color: var(--text2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .modal-sub { padding: 4px 20px 0; font-size: 13px; color: var(--text2); }
+  .modal-divider { height: 1px; background: var(--border); margin: 16px 0; }
+  .modal-section-label { font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.7px; padding: 0 20px; margin-bottom: 10px; }
+  .status-row { display: flex; gap: 10px; padding: 0 20px; margin-bottom: 16px; }
+  .status-btn {
+    flex: 1; padding: 11px 8px; border-radius: 10px;
+    border: 1.5px solid var(--border);
+    background: var(--bg); cursor: pointer;
+    font-size: 13px; font-weight: 500; color: var(--text2);
+    transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .status-btn .s-icon { font-size: 15px; }
+  .status-btn:hover { border-color: #aaa; background: #f0f0f0; }
+  .status-btn.ok { background: #e6f4ea; border-color: #34a853; color: #137333; }
+  .status-btn.no { background: #fce8e6; border-color: #ea4335; color: #c5221f; }
+  .note-area { margin: 0 20px 16px; width: calc(100% - 40px); min-height: 90px; border: 1.5px solid var(--border); border-radius: 10px; padding: 12px; font-size: 14px; font-family: 'Roboto', sans-serif; color: var(--text); background: var(--bg); resize: none; transition: border-color 0.15s; }
+  .note-area:focus { outline: none; border-color: var(--blue); background: white; }
+  .save-btn { display: block; margin: 0 20px 20px; width: calc(100% - 40px); padding: 14px; background: var(--blue); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 500; font-family: 'Google Sans', sans-serif; cursor: pointer; transition: background 0.15s; }
+  .save-btn:hover { background: var(--blue-dark); }
+  .save-btn:active { transform: scale(0.98); }
+
+  /* LOADING */
+  .loading-screen { position: fixed; inset: 0; background: var(--blue); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999; transition: opacity 0.4s; }
+  .loading-screen.hidden { opacity: 0; pointer-events: none; }
+  .loading-logo { font-family: 'Google Sans', sans-serif; font-size: 28px; font-weight: 700; color: white; margin-bottom: 8px; }
+  .loading-sub { font-size: 14px; color: rgba(255,255,255,0.7); margin-bottom: 32px; }
+  .loading-spinner { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* EMPTY STATE */
+  .empty-col { display: flex; align-items: center; justify-content: center; height: 48px; }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #323232; color: white; padding: 10px 20px; border-radius: 8px; font-size: 13px; z-index: 300; transition: transform 0.25s; white-space: nowrap; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* STATUS NO HEADER STRIP */
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; margin-left: 6px; display: inline-block; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">📅 Agenda Amanda</div>
+  <div class="loading-sub">Carregando horários...</div>
+  <div class="loading-spinner"></div>
+</div>
+
+<div class="top-bar">
+  <div class="top-bar-left">
+    <div class="avatar">A</div>
+    <div>
+      <div class="top-title">Amanda <span class="sync-dot" id="syncDot" style="display:none"></span></div>
+      <div class="top-week" id="weekLabel">–</div>
+    </div>
+  </div>
+  <div class="top-bar-right">
+    <button class="today-btn" onclick="goToday()">Hoje</button>
+    <button class="nav-btn" onclick="changeWeek(-1)">&#8249;</button>
+    <button class="nav-btn" onclick="changeWeek(1)">&#8250;</button>
+  </div>
+</div>
+
+<div class="day-strip" id="dayStrip">
+  <div class="day-strip-spacer"></div>
+</div>
+
+<div class="calendar-scroll">
+  <div class="calendar-grid" id="calGrid"></div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal-sheet" id="modalSheet">
+    <div class="modal-drag"></div>
+    <div class="modal-color-strip" id="modalStrip"></div>
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">–</div>
+      <button class="modal-close-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-sub" id="modalSub">–</div>
+    <div class="modal-divider"></div>
+    <div class="modal-section-label">Status do atendimento</div>
+    <div class="status-row">
+      <button class="status-btn" id="btnOk" onclick="setStatus('ok')">
+        <span class="s-icon">✓</span> Atendido
+      </button>
+      <button class="status-btn" id="btnNo" onclick="setStatus('nao')">
+        <span class="s-icon">✗</span> Não atendido
+      </button>
+    </div>
+    <div class="modal-section-label">Anotações</div>
+    <textarea class="note-area" id="noteArea" placeholder="Observações sobre este atendimento..."></textarea>
+    <button class="save-btn" onclick="saveNote()">Salvar</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDFOE5pTnPN_PNjlIypxTKToxhiHlSOoTs",
+  authDomain: "teste-6db76.firebaseapp.com",
+  projectId: "teste-6db76",
+  storageBucket: "teste-6db76.firebasestorage.app",
+  messagingSenderId: "823801776195",
+  appId: "1:823801776195:web:8c6502f5491d6b46bc6cf6"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+window._db = db;
+window._firestoreReady = true;
+document.getElementById('syncDot').style.display = 'inline-block';
+
+// ---- CONFIG ----
+const SHEET_ID = '1kItQnxGftlSwHtsTZRhd4ESFfKE6Wltz';
+const SHEET_NAME = 'HORÁRIOS PROFISSIONAIS';
+const PROFESSIONAL = 'AMANDA';
+
+// ---- DAYS / SLOTS ----
+const DAY_NAMES = ['SEG','TER','QUA','QUI','SEX','SÁB'];
+const DAY_FULL  = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+
+// Slots de 7:00 às 19:00, 30 em 30 min
+const SLOTS = [];
+for (let h = 7; h < 19; h++) {
+  SLOTS.push(`${h}:00`);
+  SLOTS.push(`${h}:30`);
+}
+
+// ---- STATE ----
+let weekOffset = 0;
+let parsedEvents = [];
+let notes = {}; // { eventKey: { status, text } }
+let currentKey = null;
+let currentStatus = null;
+
+// ---- FETCH SHEET ----
+async function fetchSheet() {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
+  const r = await fetch(url);
+  const text = await r.text();
+  return parseCSV(text);
+}
+
+function parseCSV(text) {
+  const lines = text.split('\n');
+  return lines.map(line => {
+    const cols = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') { inQ = !inQ; }
+      else if (c === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+      else { cur += c; }
+    }
+    cols.push(cur.trim());
+    return cols;
+  });
+}
+
+// ---- PARSE EVENTS FOR AMANDA ----
+function parseAmanda(rows) {
+  // Find the row where AMANDA header is
+  let amandaHeaderRow = -1;
+  for (let i = 0; i < rows.length; i++) {
+    const joined = rows[i].join(' ').toUpperCase();
+    if (joined.includes(PROFESSIONAL)) {
+      amandaHeaderRow = i;
+      break;
+    }
+  }
+  if (amandaHeaderRow === -1) return [];
+
+  // Row after header = day names, row after that = start of schedule
+  const dayRow = rows[amandaHeaderRow + 1] || [];
+  // Find columns for each day (Segunda=1..Sábado=6)
+  // dayRow typically: ["DIA DA SEMANA", "Segunda-Feira", "Terça-Feira", ...]
+  const dayColMap = {}; // dayIndex (0-5) -> colIndex
+  dayRow.forEach((cell, ci) => {
+    const c = cell.toLowerCase();
+    if (c.includes('segunda')) dayColMap[0] = ci;
+    else if (c.includes('ter')) dayColMap[1] = ci;
+    else if (c.includes('quarta')) dayColMap[2] = ci;
+    else if (c.includes('quinta')) dayColMap[3] = ci;
+    else if (c.includes('sexta')) dayColMap[4] = ci;
+    else if (c.includes('s') && c.includes('bado')) dayColMap[5] = ci;
+  });
+
+  // Find time column (col 0 of dayRow usually "DIA DA SEMANA", actual time in col right before days or same block)
+  // Time values are in col index 1 typically (second col after a merge)
+  // We look for the col with time-like values
+  let timeCol = 1;
+  for (let i = amandaHeaderRow + 2; i < Math.min(amandaHeaderRow + 10, rows.length); i++) {
+    for (let ci = 0; ci < rows[i].length; ci++) {
+      if (/^\d{1,2}:\d{2}$/.test(rows[i][ci].trim())) { timeCol = ci; break; }
+    }
+  }
+
+  const events = [];
+  const scheduleRows = rows.slice(amandaHeaderRow + 2);
+
+  // Colors matching the spreadsheet
+  const colorMap = {
+    default: { bg: '#1a73e8', text: '#fff' }
+  };
+
+  const knownColors = [
+    { match: /daniel/i,            bg: '#34a853', text: '#fff' },
+    { match: /éster|ester/i,       bg: '#ea4335', text: '#fff' },
+    { match: /supervisão|supervisao/i, bg: '#fbbc04', text: '#5f3e00' },
+    { match: /davi/i,              bg: '#1a73e8', text: '#fff' },
+    { match: /cecília|cecilia/i,   bg: '#ab47bc', text: '#fff' },
+    { match: /lucas saeki/i,       bg: '#00897b', text: '#fff' },
+    { match: /^lucas$/i,           bg: '#c2185b', text: '#fff' },
+    { match: /clínica|clinica/i,   bg: '#78909c', text: '#fff' },
+    { match: /almoço|almoco/i,     bg: '#bdbdbd', text: '#444' },
+  ];
+
+  function getColor(name) {
+    for (const c of knownColors) {
+      if (c.match.test(name.trim())) return { bg: c.bg, text: c.text };
+    }
+    // Generate deterministic color from name
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    const hue = Math.abs(hash) % 360;
+    return { bg: `hsl(${hue},60%,45%)`, text: '#fff' };
+  }
+
+  // Build event list: find consecutive cells with same name = span
+  for (let dayIdx = 0; dayIdx <= 5; dayIdx++) {
+    const col = dayColMap[dayIdx];
+    if (col === undefined) continue;
+
+    let i = 0;
+    while (i < scheduleRows.length) {
+      const row = scheduleRows[i];
+      const timeVal = (row[timeCol] || '').trim();
+      const cellVal = (row[col] || '').trim();
+
+      if (!cellVal || cellVal.toLowerCase() === 'almoço' || cellVal === '') { i++; continue; }
+
+      // Look ahead for span (same text)
+      let span = 1;
+      while (
+        i + span < scheduleRows.length &&
+        (scheduleRows[i + span][col] || '').trim() === cellVal
+      ) span++;
+
+      const startTime = timeVal || slotByIndex(i);
+      const endRow = i + span;
+      const endTime = (scheduleRows[endRow] ? scheduleRows[endRow][timeCol] : '') || slotByIndex(endRow);
+
+      if (startTime) {
+        events.push({
+          day: dayIdx,
+          start: startTime,
+          end: endTime,
+          name: cellVal,
+          spanRows: span,
+          rowStart: i,
+          ...getColor(cellVal)
+        });
+      }
+      i += span;
+    }
+  }
+  return events;
+}
+
+function slotByIndex(i) {
+  // Guess time if missing
+  const h = 7 + Math.floor(i / 2);
+  const m = (i % 2) * 30;
+  return `${h}:${m === 0 ? '00' : '30'}`;
+}
+
+// ---- FIREBASE ----
+async function loadNotes() {
+  try {
+    const ref = doc(window._db, 'amanda', 'notes');
+    const snap = await getDoc(ref);
+    if (snap.exists()) notes = snap.data();
+  } catch(e) { console.warn('Firebase load error', e); }
+}
+
+async function saveNotes() {
+  try {
+    const ref = doc(window._db, 'amanda', 'notes');
+    await setDoc(ref, notes);
+  } catch(e) { showToast('Erro ao salvar. Verifique a conexão.'); }
+}
+
+// ---- WEEK NAV ----
+function getMonday(offset) {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff + offset * 7);
+  d.setHours(0,0,0,0);
+  return d;
+}
+
+function fmtDate(d) {
+  return d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
+}
+
+window.changeWeek = function(dir) { weekOffset += dir; render(); };
+window.goToday = function() { weekOffset = 0; render(); };
+
+// ---- EVENT KEY ----
+function eventKey(ev, wOffset, dateStr) {
+  return `w${wOffset}_${dateStr}_d${ev.day}_${ev.start}_${ev.name.replace(/\s+/g,'_')}`;
+}
+
+// ---- RENDER ----
+function render() {
+  const monday = getMonday(weekOffset);
+  const days = Array.from({length: 6}, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d;
+  });
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  document.getElementById('weekLabel').textContent =
+    fmtDate(days[0]) + ' – ' + fmtDate(days[5]);
+
+  // Day strip headers
+  const strip = document.getElementById('dayStrip');
+  strip.innerHTML = '<div class="day-strip-spacer"></div>';
+  days.forEach((d, i) => {
+    const isToday = d.getTime() === today.getTime();
+    const div = document.createElement('div');
+    div.className = 'day-col-header';
+    div.innerHTML = `<div class="day-name">${DAY_NAMES[i]}</div>
+      <div class="day-num-wrap ${isToday ? 'today' : ''}">
+        <span class="day-num">${d.getDate()}</span>
+      </div>`;
+    strip.appendChild(div);
+  });
+
+  // Grid
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+
+  // Time gutter
+  const gutter = document.createElement('div');
+  gutter.className = 'time-gutter';
+  SLOTS.forEach(slot => {
+    const tc = document.createElement('div');
+    tc.className = 'time-cell' + (slot.endsWith(':30') ? ' half' : '');
+    tc.textContent = slot.endsWith(':00') ? slot : '';
+    gutter.appendChild(tc);
+  });
+  grid.appendChild(gutter);
+
+  // Day columns
+  for (let d = 0; d < 6; d++) {
+    const col = document.createElement('div');
+    col.className = 'day-column';
+    const dateStr = days[d].toISOString().slice(0,10);
+
+    // Create cells
+    SLOTS.forEach((slot, si) => {
+      const cell = document.createElement('div');
+      cell.className = 'grid-cell' + (slot.endsWith(':30') ? ' half-hour' : '');
+      col.appendChild(cell);
+    });
+
+    // Place events
+    parsedEvents.filter(ev => ev.day === d).forEach(ev => {
+      const si = SLOTS.indexOf(ev.start);
+      const ei = SLOTS.indexOf(ev.end);
+      if (si === -1) return;
+      const span = ei > si ? ei - si : 1;
+      const h = span * 48 - 4;
+      const top = si * 48 + 2;
+
+      const key = eventKey(ev, weekOffset, dateStr);
+      const note = notes[key] || {};
+
+      const el = document.createElement('div');
+      el.className = 'event-block';
+      el.style.background = ev.bg;
+      el.style.color = ev.text;
+      el.style.top = top + 'px';
+      el.style.height = h + 'px';
+
+      let badge = '';
+      if (note.status === 'ok') badge = `<span class="event-badge badge-ok">✓</span>`;
+      else if (note.status === 'nao') badge = `<span class="event-badge badge-no">✗</span>`;
+
+      el.innerHTML = `
+        <div class="event-top">
+          <span class="event-name">${ev.name}</span>
+          ${badge}
+        </div>
+        ${span > 1 ? `<span class="event-time">${ev.start} – ${ev.end}</span>` : ''}
+      `;
+      el.onclick = () => openModal(ev, key, dateStr);
+      col.appendChild(el);
+    });
+
+    grid.appendChild(col);
+  }
+}
+
+// ---- MODAL ----
+window.openModal = function(ev, key, dateStr) {
+  currentKey = key;
+  const note = notes[key] || {};
+  currentStatus = note.status || null;
+
+  // Find full day name
+  const dayFull = DAY_FULL[ev.day];
+  document.getElementById('modalStrip').style.background = ev.bg;
+  document.getElementById('modalTitle').textContent = ev.name;
+  document.getElementById('modalSub').textContent = `${dayFull} · ${ev.start} – ${ev.end}`;
+  document.getElementById('noteArea').value = note.text || '';
+  updateStatusBtns();
+  document.getElementById('modalOverlay').classList.add('open');
+};
+
+window.closeModal = function() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  currentKey = null; currentStatus = null;
+};
+
+window.handleOverlayClick = function(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+};
+
+window.setStatus = function(s) {
+  currentStatus = currentStatus === s ? null : s;
+  updateStatusBtns();
+};
+
+function updateStatusBtns() {
+  document.getElementById('btnOk').className = 'status-btn' + (currentStatus === 'ok' ? ' ok' : '');
+  document.getElementById('btnNo').className = 'status-btn' + (currentStatus === 'nao' ? ' no' : '');
+}
+
+window.saveNote = async function() {
+  if (!currentKey) return;
+  notes[currentKey] = {
+    status: currentStatus,
+    text: document.getElementById('noteArea').value,
+    updatedAt: new Date().toISOString()
+  };
+  await saveNotes();
+  closeModal();
+  render();
+  showToast('Salvo com sucesso!');
+};
+
+// ---- TOAST ----
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ---- INIT ----
+async function init() {
+  try {
+    const [rows] = await Promise.all([fetchSheet(), loadNotes()]);
+    parsedEvents = parseAmanda(rows);
+    render();
+  } catch(e) {
+    console.error(e);
+    showToast('Erro ao carregar planilha. Verifique a conexão.');
+  } finally {
+    const ls = document.getElementById('loadingScreen');
+    ls.classList.add('hidden');
+    setTimeout(() => ls.remove(), 500);
+  }
+}
+
+init();
+</script>
+</body>
+</html>
