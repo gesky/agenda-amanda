@@ -7,10 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --blue:#1a73e8;--blue-dark:#1557b0;--surface:#fff;--bg:#f6f8fc;
-    --text:#202124;--text2:#5f6368;--text3:#80868b;--border:#dadce0;--hh:56px;
-  }
+  :root{--blue:#1a73e8;--blue-dark:#1557b0;--surface:#fff;--bg:#f6f8fc;--text:#202124;--text2:#5f6368;--text3:#80868b;--border:#dadce0;--hh:56px;}
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
   body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
 
@@ -46,7 +43,7 @@
   .gcell{height:48px;border-top:1px solid var(--border);}
   .gcell.hh{border-top-color:#efefef;}
 
-  .evb{position:absolute;left:2px;right:2px;border-radius:6px;padding:3px 6px;cursor:pointer;overflow:hidden;z-index:5;display:flex;flex-direction:column;justify-content:space-between;transition:filter .15s,transform .1s;box-shadow:0 1px 3px rgba(0,0,0,.12);}
+  .evb{position:absolute;left:2px;right:2px;border-radius:6px;padding:3px 6px;cursor:pointer;overflow:hidden;z-index:5;display:flex;flex-direction:column;justify-content:space-between;transition:filter .15s,transform .1s;box-shadow:0 1px 3px rgba(0,0,0,.15);}
   .evb:hover{filter:brightness(.92);transform:scale(1.01);}
   .evb:active{transform:scale(.98);}
   .evt{display:flex;align-items:flex-start;justify-content:space-between;}
@@ -75,7 +72,7 @@
   .sbtn.no{background:#fce8e6;border-color:#ea4335;color:#c5221f;}
   .nta{margin:0 20px 16px;width:calc(100% - 40px);min-height:90px;border:1.5px solid var(--border);border-radius:10px;padding:12px;font-size:14px;font-family:'Roboto',sans-serif;color:var(--text);background:var(--bg);resize:none;transition:border-color .15s;}
   .nta:focus{outline:none;border-color:var(--blue);background:#fff;}
-  .svb{display:block;margin:0 20px 20px;width:calc(100% - 40px);padding:14px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:500;font-family:'Google Sans',sans-serif;cursor:pointer;transition:background .15s;}
+  .svb{display:block;margin:0 20px 20px;width:calc(100% - 40px);padding:14px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:500;font-family:'Google Sans',sans-serif;cursor:pointer;}
   .svb:hover{background:var(--blue-dark);}
 
   .lsc{position:fixed;inset:0;background:var(--blue);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity .4s;}
@@ -87,14 +84,32 @@
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#323232;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:300;transition:transform .25s;white-space:nowrap;}
   .toast.show{transform:translateX(-50%) translateY(0);}
   .errbanner{background:#fce8e6;color:#c5221f;padding:12px 16px;font-size:13px;text-align:center;}
+
+  .setup-screen{display:none;position:fixed;inset:0;background:var(--blue);z-index:998;padding:32px 24px;overflow-y:auto;}
+  .setup-screen.show{display:block;}
+  .setup-title{font-family:'Google Sans',sans-serif;font-size:22px;font-weight:700;color:#fff;margin-bottom:8px;}
+  .setup-sub{font-size:14px;color:rgba(255,255,255,.8);margin-bottom:28px;line-height:1.6;}
+  .setup-input{width:100%;padding:14px;border-radius:10px;border:none;font-size:14px;font-family:'Roboto',sans-serif;margin-bottom:16px;}
+  .setup-btn{width:100%;padding:14px;background:#fff;color:var(--blue);border:none;border-radius:10px;font-size:15px;font-weight:700;font-family:'Google Sans',sans-serif;cursor:pointer;}
 </style>
 </head>
 <body>
 
 <div class="lsc" id="lsc">
   <div class="lsl">📅 Agenda Amanda</div>
-  <div class="lss">Carregando horários...</div>
+  <div class="lss" id="lss">Carregando horários...</div>
   <div class="lsp"></div>
+</div>
+
+<!-- Tela de configuração inicial (se não tiver URL do Apps Script) -->
+<div class="setup-screen" id="setupScreen">
+  <div class="setup-title">⚙️ Configuração inicial</div>
+  <div class="setup-sub">
+    Cole aqui a URL do Web App do Google Apps Script que você criou.<br><br>
+    Ela começa com: <strong>https://script.google.com/macros/s/...</strong>
+  </div>
+  <input class="setup-input" id="scriptUrlInput" type="url" placeholder="https://script.google.com/macros/s/..." />
+  <button class="setup-btn" onclick="saveScriptUrl()">Salvar e carregar agenda</button>
 </div>
 
 <div class="top-bar">
@@ -152,190 +167,59 @@ const fbApp = initializeApp({
 });
 const db = getFirestore(fbApp);
 
-const SHEET_ID = '1kItQnxGftlSwHtsTZRhd4ESFfKE6Wltz';
-const API_KEY  = 'AIzaSyDFOE5pTnPN_PNjlIypxTKToxhiHlSOoTs';
-const SHEET_NAME = 'HORÁRIOS PROFISSIONAIS';
-
 const DAY_SHORT = ['SEG','TER','QUA','QUI','SEX','SÁB'];
 const DAY_FULL  = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const SLOTS = [];
-for(let h=7;h<19;h++){SLOTS.push(`${h}:00`);SLOTS.push(`${h}:30`);}
+for(let h=7;h<20;h++){SLOTS.push(`${h}:00`);SLOTS.push(`${h}:30`);}
 
 let weekOff=0, events=[], notes={}, curKey=null, curSt=null;
 
-// ── Sheets API with merge expansion ──────────────────────
-async function fetchGrid() {
-  const enc = encodeURIComponent(SHEET_NAME);
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?includeGridData=true&ranges=${enc}&key=${API_KEY}`;
+// ── Script URL storage ─────────────────────────────────────
+function getScriptUrl() { return localStorage.getItem('amanda_script_url') || ''; }
+window.saveScriptUrl = function() {
+  const url = document.getElementById('scriptUrlInput').value.trim();
+  if(!url.startsWith('https://script.google.com')) { toast('URL inválida. Verifique e tente novamente.'); return; }
+  localStorage.setItem('amanda_script_url', url);
+  document.getElementById('setupScreen').classList.remove('show');
+  init();
+};
+
+// ── Fetch events from Apps Script ─────────────────────────
+async function fetchEvents() {
+  const url = getScriptUrl();
+  if(!url) throw new Error('NO_URL');
   const r = await fetch(url);
-  if(!r.ok) throw new Error('Sheets API: '+r.status+' '+await r.text());
+  if(!r.ok) throw new Error('Apps Script retornou ' + r.status);
   const data = await r.json();
-  const sheet = data.sheets[0];
-  const rowData = sheet.data[0].rowData || [];
-  const merges  = sheet.merges || [];
-
-  // Build 2D array of {val, bg}
-  const grid = rowData.map(row =>
-    (row.values || []).map(cell => {
-      const ev = cell.effectiveValue;
-      let val = '';
-      if(ev){
-        if(ev.stringValue !== undefined) val = ev.stringValue;
-        else if(ev.numberValue !== undefined) val = String(ev.numberValue);
-      }
-      const fmt = cell.effectiveFormat || {};
-      const bc  = fmt.backgroundColor || {};
-      const r255 = Math.round((bc.red||0)*255);
-      const g255 = Math.round((bc.green||0)*255);
-      const b255 = Math.round((bc.blue||0)*255);
-      const isWhite = r255>250 && g255>250 && b255>250;
-      const bg = (!isWhite && (bc.red!==undefined||bc.green!==undefined)) ? `rgb(${r255},${g255},${b255})` : null;
-      return {val, bg};
-    })
-  );
-
-  // Expand merges
-  merges.forEach(({startRowIndex:r0,endRowIndex:r1,startColumnIndex:c0,endColumnIndex:c1})=>{
-    const src = grid[r0]?.[c0] || {val:'',bg:null};
-    for(let r=r0;r<r1;r++) for(let c=c0;c<c1;c++){
-      if(r===r0&&c===c0) continue;
-      if(!grid[r]) grid[r]=[];
-      grid[r][c] = {...src};
-    }
-  });
-  return grid;
+  if(!data.ok) throw new Error(data.error || 'Erro no Apps Script');
+  return data.events;
 }
 
-// ── Parse Amanda's schedule from the expanded grid ───────
-function parseAmanda(grid) {
-  // Find AMANDA header cell
-  let aRow=-1, aCol=-1;
-  outer: for(let r=0;r<grid.length;r++){
-    for(let c=0;c<(grid[r]||[]).length;c++){
-      const v=(grid[r][c]?.val||'').trim().toUpperCase();
-      if(v==='AMANDA'||v.startsWith('AMANDA ')){aRow=r;aCol=c;break outer;}
-    }
-  }
-  if(aRow===-1) return [];
-
-  // Find the row that contains day names (Segunda, Terça...) — typically aRow or aRow+1
-  // and the col containing times
-  const dayKw=['segunda','terça','terca','quarta','quinta','sexta','sábado','sabado'];
-  let dayRow=aRow, timeCol=-1, dayStartCol=aCol;
-
-  // Check aRow+1 for day names
-  const nr=grid[aRow+1]||[];
-  if(nr.some(c=>dayKw.some(k=>(c?.val||'').toLowerCase().includes(k)))){
-    dayRow=aRow+1;
-  }
-
-  // Find time col: first col with a "H:MM" pattern in the rows below dayRow
-  for(let c=0;c<(grid[dayRow+1]||[]).length;c++){
-    if(/^\d{1,2}:\d{2}$/.test((grid[dayRow+1]?.[c]?.val||'').trim())){
-      timeCol=c; break;
-    }
-  }
-
-  // Determine day cols: from the header row (aRow), the 6 days start at aCol
-  // Verify by checking that aCol..aCol+5 cols have day-name content in dayRow
-  // (they might have the day name merged into the header)
-  // We'll trust aCol+0..5 based on CSV analysis showing that structure
-
-  const dataStart = dayRow+1;
-  const skip = new Set(['','almoço','almoco','dia da semana']);
-  const colorRules=[
-    {re:/daniel/i,             bg:'#34a853',tx:'#fff'},
-    {re:/éster|ester/i,        bg:'#ea4335',tx:'#fff'},
-    {re:/supervisão|supervisao/i,bg:'#fbbc04',tx:'#3d2c00'},
-    {re:/davi/i,               bg:'#1a73e8',tx:'#fff'},
-    {re:/cecília|cecilia/i,    bg:'#ab47bc',tx:'#fff'},
-    {re:/lucas saeki/i,        bg:'#00897b',tx:'#fff'},
-    {re:/lucas/i,              bg:'#c2185b',tx:'#fff'},
-    {re:/clínica|clinica/i,    bg:'#607d8b',tx:'#fff'},
-    {re:/mestrado/i,           bg:'#ff7043',tx:'#fff'},
-  ];
-
-  function getColor(name, cellBg){
-    if(cellBg){
-      const m=cellBg.match(/rgb\((\d+),(\d+),(\d+)\)/);
-      if(m){
-        const lum=.299*+m[1]+.587*+m[2]+.114*+m[3];
-        return {bg:cellBg, tx:lum>160?'#3d2c00':'#fff'};
-      }
-    }
-    for(const r of colorRules) if(r.re.test(name)) return {bg:r.bg,tx:r.tx};
-    let h=0; for(let i=0;i<name.length;i++) h=name.charCodeAt(i)+((h<<5)-h);
-    return {bg:`hsl(${Math.abs(h)%360},55%,42%)`,tx:'#fff'};
-  }
-
-  const evs=[];
-  // Stop row: find next professional header after dataStart
-  let stopRow=grid.length;
-  for(let r=dataStart+2;r<grid.length;r++){
-    const row=grid[r]||[];
-    for(let c=aCol;c<aCol+6;c++){
-      const v=(row[c]?.val||'').trim().toUpperCase();
-      // Detect another professional's name (all-caps word, not a time or known value)
-      if(v.length>2&&/^[A-ZÁÉÍÓÚÀÂÊÔÃÕÇÜ\s]+$/.test(v)&&!dayKw.some(k=>v.toLowerCase()===k)&&!/^\d/.test(v)&&v!=='AMANDA'){
-        // Check if it looks like a name (not an appointment)
-        // A name cell at a day column without a time pattern is suspicious
-        const prevCellsEmpty=([0,1,2,3,4,5].every(d=>{
-          const prev=(grid[r-1]?.[aCol+d]?.val||'').trim();
-          return !prev||skip.has(prev.toLowerCase());
-        }));
-        if(prevCellsEmpty){stopRow=r;break;}
-      }
-    }
-    if(stopRow!==grid.length) break;
-  }
-
-  for(let dayIdx=0;dayIdx<6;dayIdx++){
-    const col=aCol+dayIdx;
-    let ri=dataStart;
-    while(ri<stopRow){
-      const row=grid[ri]||[];
-      const tval=(timeCol>=0?(grid[ri]?.[timeCol]?.val||''):'').trim();
-      const cell=row[col]||{val:'',bg:null};
-      const cval=cell.val.trim();
-
-      if(!cval||skip.has(cval.toLowerCase())||/^(segunda|terça|terca|quarta|quinta|sexta|sábado|sabado|amanda)/i.test(cval)){
-        ri++; continue;
-      }
-
-      // Count consecutive rows with same value (merged cell span)
-      let span=1;
-      while(ri+span<stopRow&&(grid[ri+span]?.[col]?.val||'').trim()===cval) span++;
-
-      const endRow=ri+span;
-      const endTime=(timeCol>=0?(grid[endRow]?.[timeCol]?.val||''):'').trim();
-      const startTime=tval;
-
-      if(startTime&&/^\d{1,2}:\d{2}$/.test(startTime)){
-        const col2=getColor(cval,cell.bg);
-        evs.push({day:dayIdx,start:startTime,end:endTime||addMins(startTime,span*30),name:cval,bg:col2.bg,tx:col2.tx,span});
-      }
-      ri+=span;
-    }
-  }
-  return evs;
+// ── Text color from background ─────────────────────────────
+function textColor(bg) {
+  if(!bg || bg === '#ffffff') return '#fff';
+  const m = bg.match(/^#([0-9a-f]{6})$/i) || bg.match(/^#([0-9a-f]{3})$/i);
+  if(!m) return '#fff';
+  let hex = m[1];
+  if(hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
+  const r=parseInt(hex.slice(0,2),16), g=parseInt(hex.slice(2,4),16), b=parseInt(hex.slice(4,6),16);
+  const lum = 0.299*r + 0.587*g + 0.114*b;
+  return lum > 150 ? '#3d2c00' : '#fff';
 }
 
-function addMins(t,m){const[h,mm]=t.split(':').map(Number);const tot=h*60+mm+m;return `${Math.floor(tot/60)}:${String(tot%60).padStart(2,'0')}`;}
-
-// ── Firebase ──────────────────────────────────────────────
+// ── Firebase ───────────────────────────────────────────────
 async function loadNotes(){try{const s=await getDoc(doc(db,'amanda','notes'));if(s.exists())notes=s.data();}catch(e){console.warn(e);}}
 async function saveNotes(){try{await setDoc(doc(db,'amanda','notes'),notes);}catch(e){toast('Erro ao salvar.');}}
 
-// ── Week ──────────────────────────────────────────────────
+// ── Week ───────────────────────────────────────────────────
 function monday(off){const d=new Date();d.setDate(d.getDate()-d.getDay()+(d.getDay()===0?-6:1)+off*7);d.setHours(0,0,0,0);return d;}
 function fmtD(d){return d.toLocaleDateString('pt-BR',{day:'numeric',month:'short'});}
 window.changeWeek=d=>{weekOff+=d;render();};
 window.goToday=()=>{weekOff=0;render();};
 
-// ── Event key ─────────────────────────────────────────────
 function ekey(ev,ds){return `${ds}_d${ev.day}_${ev.start}_${ev.name.replace(/\s+/g,'_')}`;}
 
-// ── Render ────────────────────────────────────────────────
+// ── Render ─────────────────────────────────────────────────
 function render(){
   const mon=monday(weekOff);
   const days=Array.from({length:6},(_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d;});
@@ -347,16 +231,12 @@ function render(){
   strip.innerHTML='<div class="dstrip-sp"></div>';
   days.forEach((d,i)=>{
     const isT=d.getTime()===tod.getTime();
-    const el=document.createElement('div');
-    el.className='dch';
+    const el=document.createElement('div');el.className='dch';
     el.innerHTML=`<div class="dn">${DAY_SHORT[i]}</div><div class="dnw${isT?' today':''}"><span class="dnum">${d.getDate()}</span></div>`;
     strip.appendChild(el);
   });
 
-  const grid=document.getElementById('cgrid');
-  grid.innerHTML='';
-
-  // Gutter
+  const grid=document.getElementById('cgrid');grid.innerHTML='';
   const gut=document.createElement('div');gut.className='tgut';
   SLOTS.forEach(s=>{const tc=document.createElement('div');tc.className='tc'+(s.endsWith(':30')?' half':'');tc.textContent=s.endsWith(':00')?s:'';gut.appendChild(tc);});
   grid.appendChild(gut);
@@ -373,12 +253,12 @@ function render(){
       const span=ei>si?ei-si:ev.span||1;
       const key=ekey(ev,ds);
       const note=notes[key]||{};
+      const tx=textColor(ev.bg);
       let badge='';
-      if(note.status==='ok') badge='<span class="badge bok">✓</span>';
+      if(note.status==='ok')  badge='<span class="badge bok">✓</span>';
       if(note.status==='nao') badge='<span class="badge bno">✗</span>';
-      const el=document.createElement('div');
-      el.className='evb';
-      el.style.cssText=`background:${ev.bg};color:${ev.tx};top:${si*48+2}px;height:${span*48-4}px;`;
+      const el=document.createElement('div');el.className='evb';
+      el.style.cssText=`background:${ev.bg};color:${tx};top:${si*48+2}px;height:${span*48-4}px;`;
       el.innerHTML=`<div class="evt"><span class="evn">${ev.name}</span>${badge}</div>${span>1?`<span class="evsub">${ev.start} – ${ev.end}</span>`:''}`;
       el.onclick=()=>openModal(ev,key);
       col.appendChild(el);
@@ -387,7 +267,7 @@ function render(){
   });
 }
 
-// ── Modal ─────────────────────────────────────────────────
+// ── Modal ──────────────────────────────────────────────────
 function openModal(ev,key){
   curKey=key;curSt=(notes[key]||{}).status||null;
   document.getElementById('mcs').style.background=ev.bg;
@@ -407,28 +287,33 @@ function updBtns(){
 window.saveNote=async()=>{
   if(!curKey)return;
   notes[curKey]={status:curSt,text:document.getElementById('nta').value,updatedAt:new Date().toISOString()};
-  await saveNotes();
-  closeModal();render();toast('Salvo!');
+  await saveNotes();closeModal();render();toast('Salvo!');
 };
 
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
 
-// ── Init ──────────────────────────────────────────────────
+// ── Init ───────────────────────────────────────────────────
 async function init(){
   try{
-    const [grid]=await Promise.all([fetchGrid(),loadNotes()]);
-    events=parseAmanda(grid);
+    document.getElementById('lss').textContent='Carregando horários...';
+    const [evs]=await Promise.all([fetchEvents(),loadNotes()]);
+    events=evs;
     document.getElementById('sdot').style.display='inline-block';
     render();
   }catch(e){
+    if(e.message==='NO_URL'){
+      document.getElementById('lsc').classList.add('hidden');
+      document.getElementById('setupScreen').classList.add('show');
+      return;
+    }
     console.error(e);
-    document.body.insertAdjacentHTML('afterbegin',`<div class="errbanner">Erro: ${e.message}. Verifique se a Sheets API está ativada.</div>`);
+    document.body.insertAdjacentHTML('afterbegin',`<div class="errbanner">Erro ao carregar: ${e.message}</div>`);
   }finally{
     const ls=document.getElementById('lsc');
-    ls.classList.add('hidden');
-    setTimeout(()=>ls.remove(),500);
+    ls.classList.add('hidden');setTimeout(()=>ls.remove(),500);
   }
 }
+
 init();
 </script>
 </body>
